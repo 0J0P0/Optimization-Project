@@ -32,10 +32,11 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(num_targe
     %% Output parameters
     wo=wk(:,end);fo=Lk(:,end);
     tr_acc=100/tr_p;
-    te_acc=100/tr_q;
+    te_acc=100/te_q;
     tex=0;
 end
 % [end] Neural Network OM solve %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 
 
 % [start] Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

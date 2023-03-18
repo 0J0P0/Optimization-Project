@@ -24,7 +24,7 @@ t1=clock;
 [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu);
 t2=clock;
 
-uo_nn_Xyplot(Xtr, ytr, []);
+uo_nn_Xyplot(Xtr, ytr, wo);
 fprintf(' wall time = %6.1d s.\n', etime(t2,t1));
 %
 
