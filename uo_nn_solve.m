@@ -42,19 +42,19 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(num_targe
     [Xtr,ytr] = uo_nn_dataset(tr_seed, tr_p, num_target, tr_freq);
     [Xte,yte] = uo_nn_dataset(te_seed, te_q, num_target, 0.0);
     %% Part 1: recognition of some specific target with GM and QNM
-    w = zeros(size(Xtr,1),1);                                               %% como defines w?? unos?? ceros --> 100%
+    w = zeros(size(Xtr,1),1);                                              %% como defines w?? unos?? ceros --> 100%
     sig = @(X) 1./(1 + exp(-X)); y = @(X,w) sig(w'*sig(X));
-    L = @(w) (norm(y(Xtr,w) - ytr)^2)/size(ytr,2) + (la*norm(w)^2)/2;           %% es en funcion de X y y???
-    gL = @(w) (2*sig(Xtr)*((y(Xtr,w) - ytr).*y(Xtr,w).*(1 - y(Xtr,w)))')/size(ytr,2) + la*w;
+    L = @(w,X,Y) (norm(y(X,w) - Y)^2)/size(Y,2) + (la*norm(w)^2)/2;           %% es en funcion de X y y???
+    gL = @(w,X,Y) (2*sig(X)*((y(X,w)-Y).*y(X,w).*(1-y(X,w)))')/size(Y,2)+la*w;
     
     if isd == 1 || isd == 3                                                    %% borrar parametros inecesarios
-        [wk,dk,Lk,gLk,alk,iWk,betak,Hk,niter] = uo_nn_solve_fdm(w,L,gL,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu);
+        [wk,dk,Lk,gLk,alk,iWk,betak,Hk,niter] = uo_nn_solve_fdm(w,L,gL,Xtr,ytr,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu);
         wo=wk(:,end); fo=Lk(:,end);
     end
     %% Part 2: stochastic gradient method (SGM)
     if isd == 7
         [wo] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed);
-        fo = L(wo);
+        fo = L(wo,Xtr,ytr); niter = 0;
     end
     %% accuracy and output variables
     tr_v = []; te_v = [];
@@ -69,28 +69,28 @@ end
 
 
 % [start] FDM Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_fdm(w,L,gL,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu)
+function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_fdm(w,L,gL,Xtr,ytr,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu)
     k = 1; n = size(w,1); DC = 1;
-    wk = [w]; dk = []; Lk = [L(w)]; gLk = [gL(w)]; alk = []; ioutk = [];
+    wk = [w]; dk = []; Lk = [L(w,Xtr,ytr)]; gLk = [gL(w,Xtr,ytr)]; alk = []; ioutk = [];
     betak = []; Hk = [];
-    while norm(gL(w)) > epsG && k < kmax && DC
+    while norm(gL(w,Xtr,ytr)) > epsG && k < kmax && DC
         %% Descent direction
-        [d, beta, H] = uo_nn_descent_direction(w,wk,dk,Hk,gL,isd,icg,irc,nu,k,n);
+        [d, beta, H] = uo_nn_descent_direction(w,Xtr,ytr,wk,dk,Hk,gL,isd,icg,irc,nu,k,n);
         dk = [dk, d]; betak = [betak, beta]; Hk(:,:,k) = H;
         %% Step line search
         if k > 1                                                                      %% probar para min tiempo
-            ialmax = alk(:,k-1)*(gLk(:,k-1)'*dk(:,k-1))/(gL(w)'*d);
+            ialmax = alk(:,k-1)*(gLk(:,k-1)'*dk(:,k-1))/(gL(w,Xtr,ytr)'*d);
         end
 %         if k > 1
-%             ialmax = 2*(L(w)-Lk(:,k-1))/(gL(w)'*d);
+%             ialmax = 2*(L(w,Xtr,ytr)-Lk(:,k-1))/(gL(w,Xtr,ytr)'*d);
 %         end
-        [alpha,iout] = uo_BLSNW32(L,gL,w,d,ialmax,c1,c2,kmaxBLS,epsal);
+        [alpha,iout] = uo_BLSNW32(@(w) L(w,Xtr,ytr),@(w) gL(w,Xtr,ytr),w,d,ialmax,c1,c2,kmaxBLS,epsal);
         alk = [alk, alpha]; ioutk = [ioutk, iout];
         %% Descent condition
-        if gL(w)'*d >= 0; DC = 0; end
+        if gL(w,Xtr,ytr)'*d >= 0; DC = 0; end
         %% Update Variables
         w = w + alpha*d; k = k + 1;
-        wk = [wk, w]; Lk = [Lk, L(w)]; gLk = [gLk, gL(w)];
+        wk = [wk, w]; Lk = [Lk, L(w,Xtr,ytr)]; gLk = [gLk, gL(w,Xtr,ytr)];
     end
 end
 % [end] FDM Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -99,32 +99,31 @@ end
 
 % [start] Stochastic Gradient Method %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wo] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed)
-    p = size(Xtr, 2); wo = w;
-    m = abs(sg_ga*p); ke = ceil(p/m); kmax = sg_emax*ke; e = 0; s = 0; Lbest = Inf; k = 0;
+    p = size(Xtr, 2); wk = [w];
+    m = floor(sg_ga*p); ke = ceil(p/m); kmax = sg_emax*ke; e = 0; s = 0; Lbest = Inf; k = 0;
     while e <= sg_emax && s < sg_ebest
-        P = Xtr(:,randsample(1:p,p));                                       %% se usa?????
+        P = randsample(1:p,p);
         %% Minibatches
         for i = 0:ceil(p/m-1)
-            S = []; Xtrs = []; ytrs = [];
-            for s = 1:min((i+1)*m,p)
-                S = [S, s]; Xtrs = [Xtrs, Xtr(:,s)]; ytrs = [ytrs, ytr(:,s)];
+            Xtrs = []; ytrs = [];
+            for s = i*m+1:min((i+1)*m,p)
+                Xtrs = [Xtrs, Xtr(:,P(:,uint8(s)))]; ytrs = [ytrs, ytr(:,P(:,uint8(s)))];
             end
             %% Descent direction
-            d = -gL();                                                     %%%% falta
+            d = -gL(w,Xtrs,ytrs);
             %% Learning rate
             sg_k = floor(sg_be*kmax); sg_al = 0.01*sg_al0;
             if k <= sg_k
                 al = (1-k/sg_k)*sg_al0 + (k*sg_al)/sg_k;
             elseif k > sg_k
                 al = sg_al;
-            w = w + al*d; k = k + 1;
             end
+            w = w + al*d; k = k + 1; wk = [wk,w];
         end
         %% Stopping criteria
-        e = e + 1; 
-        Lte = ;                                                             %%%%%%% falta
+        e = e + 1; Lte = L(wk(:,k),Xte,yte);
         if Lte < Lbest
-            Lbest = Lte; wo = w; s = 0;
+            Lbest = Lte; wo = wk(:,end); s = 0;
         else
             s = s + 1;
         end
