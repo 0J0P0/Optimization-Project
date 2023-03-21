@@ -43,7 +43,7 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(num_target,
     [Xtr,ytr] = uo_nn_dataset(tr_seed, tr_p, num_target, tr_freq);
     [Xte,yte] = uo_nn_dataset(te_seed, te_q, num_target, 0.0);
     %% Part 1: recognition of some specific target with GM and QNM
-    w = randn(size(Xtr,1),1);                                               %% como defines w?? unos?? ceros --> 100%
+    w = zeros(size(Xtr,1),1);                                               %% como defines w?? unos?? ceros --> 100%
     sig = @(X) 1./(1 + exp(-X)); y = @(X,w) sig(w'*sig(X));
     L = @(w) (norm(y(Xtr,w) - ytr)^2)/size(ytr,2) + (la*norm(w)^2)/2;
     gL = @(w) (2*sig(Xtr)*((y(Xtr,w) - ytr).*y(Xtr,w).*(1 - y(Xtr,w)))')/size(ytr,2) + la*w;
@@ -75,7 +75,7 @@ function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_opt(w,L,gL,epsG,kmax,
         [d, beta, H] = uo_nn_descent_direction(w,wk,dk,Hk,gL,isd,icg,irc,nu,k,n);
         dk = [dk, d]; betak = [betak, beta]; Hk(:,:,k) = H;
 
-        if k > 1 ialmax = alk(:,k-1)*(gLk(:,k-1)'*dk(:,k-1))/(gL(w)'*d); end
+        if k > 1 ialmax = alk(:,k-1)*(gLk(:,k-1)'*dk(:,k-1))/(gL(w)'*d); end  %% probar para min tiempo
 %         if k > 1 ialmax = 2*(L(w)-Lk(:,k-1))/(gL(w)'*d); end
         [alpha,iout] = uo_BLSNW32(L,gL,w,d,ialmax,c1,c2,kmaxBLS,epsal);
         alk = [alk, alpha]; ioutk = [ioutk, iout];
