@@ -20,7 +20,7 @@
 %     sg_al0 : \alpha^{SG}_0.
 %      sg_be : \beta^{SG}.
 %      sg_ga : \gamma^{SG}.
-%    sg_emax : e^{SGÇ_{max}.
+%    sg_emax : e^{SG_{max}.
 %   sg_ebest : e^{SG}_{best}.
 %    sg_seed : seed for the first random permutation of the SG.
 %        icg : if 1 : CGM-FR; if 2, CGM-PR+      (useless in this project).
@@ -48,7 +48,14 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(num_target,
     L = @(w) (norm(y(Xtr,w) - ytr)^2)/size(ytr,2) + (la*norm(w)^2)/2;
     gL = @(w) (2*sig(Xtr)*((y(Xtr,w) - ytr).*y(Xtr,w).*(1 - y(Xtr,w)))')/size(ytr,2) + la*w;
     
-    [wk,dk,Lk,gLk,alk,iWk,betak,Hk,niter] = uo_nn_solve_opt(w,L,gL,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu);
+    if isd == 1 || isd == 3
+        [wk,dk,Lk,gLk,alk,iWk,betak,Hk,niter] = uo_nn_solve_opt(w,L,gL,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu);
+    end
+    %% Part 2: stochastic gradient method (SGM)
+    if isd == 7
+        [wk,Lk,niter] = uo_nn_solve_sgm(w,L,gL,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed);
+    end
+    %% Part 3: comparation of the performance
     wo=wk(:,end); fo=Lk(:,end);
     
     tr_v = []; te_v = [];
@@ -56,17 +63,13 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(num_target,
     for j = 1:te_q te_v = [te_v, round(y(Xte(1:end,j),wo))]; end
     tr_acc = (100/tr_p) * sum(tr_v == ytr);
     te_acc = (100/te_q) * sum(te_v == yte);
-    %% Part 2: stochastic gradient method (SGM)
-
-    %% Part 3: comparation of the performance
-
     tex=0;
 end
 % [end] Neural Network OM solve %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
-% [start] Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% [start] FDM Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_opt(w,L,gL,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu)
     k = 1; n = size(w,1); DC = 1;
     wk = [w]; dk = []; Lk = [L(w)]; gLk = [gL(w)]; alk = []; ioutk = [];
@@ -86,12 +89,22 @@ function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_opt(w,L,gL,epsG,kmax,
         k = k+1;
     end
 end
-% [end] Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% [end] FDM Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
-
-
+% [start] Stochastic Gradient Method %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [wk,Lk,niter] = uo_nn_solve_sgm(w,L,gL,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed)
+    p = size(Xtr, 2);
+    m = abs(sg_ga*p); ke = ceil(p/m); kmax = sg_emax*ke; e = 0; s = 0; Lbest = Inf; k = 0;
+    while e <= sg_emax && s < sg_ebest
+        P = Xtr(:,randsample(1:p,p));
+        for i = 0:ceil(p/m-1)
+            S = 
+        end
+    end
+end
+% [end] Stochastic Gradient Method %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 
