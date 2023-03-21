@@ -27,7 +27,6 @@
 %        irc : re-starting condition for the CGM (useless in this project).
 %         nu : parameter of the RC2 for the CGM  (useless in this project).
     %% Output parameters:
-%
 %        Xtr : X^{TR}.
 %        ytr : y^{TR}.
 %         wo : w^*.
@@ -48,18 +47,16 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(num_targe
     L = @(w) (norm(y(Xtr,w) - ytr)^2)/size(ytr,2) + (la*norm(w)^2)/2;           %% es en funcion de X y y???
     gL = @(w) (2*sig(Xtr)*((y(Xtr,w) - ytr).*y(Xtr,w).*(1 - y(Xtr,w)))')/size(ytr,2) + la*w;
     
-    if isd == 1 || isd == 3
+    if isd == 1 || isd == 3                                                    %% borrar parametros inecesarios
         [wk,dk,Lk,gLk,alk,iWk,betak,Hk,niter] = uo_nn_solve_fdm(w,L,gL,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu);
         wo=wk(:,end); fo=Lk(:,end);
     end
     %% Part 2: stochastic gradient method (SGM)
     if isd == 7
-        [wo] = uo_nn_solve_sgm(w,L,gL,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed);
+        [wo] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed);
         fo = L(wo);
     end
     %% accuracy and output variables
-    
-    
     tr_v = []; te_v = [];
     for j = 1:tr_p tr_v = [tr_v, round(y(Xtr(1:end,j),wo))]; end
     for j = 1:te_q te_v = [te_v, round(y(Xte(1:end,j),wo))]; end
@@ -101,7 +98,7 @@ end
 
 
 % [start] Stochastic Gradient Method %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [wo] = uo_nn_solve_sgm(w,L,gL,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed)
+function [wo] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed)
     p = size(Xtr, 2); wo = w;
     m = abs(sg_ga*p); ke = ceil(p/m); kmax = sg_emax*ke; e = 0; s = 0; Lbest = Inf; k = 0;
     while e <= sg_emax && s < sg_ebest
