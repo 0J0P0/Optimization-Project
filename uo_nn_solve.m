@@ -55,7 +55,7 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(num_target,
     if isd == 7
         [wk,Lk,niter] = uo_nn_solve_sgm(w,L,gL,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed);
     end
-    %% Part 3: comparation of the performance
+    %% accuracy and output variables
     wo=wk(:,end); fo=Lk(:,end);
     
     tr_v = []; te_v = [];
