@@ -6,7 +6,7 @@ tr_seed = 123456; te_seed = 789101;
 tr_p = 250; te_q = 250; tr_freq = 0.5;                        % Datasets generation
 epsG = 10^-6; kmax = 1000;                                    % Stopping condition.
 ils=3; ialmax = 1; kmaxBLS=10; epsal=10^-3; c1=0.01; c2=0.45; % Linesearch.
-icg = 2; irc = 2 ; nu = 1.0;                                  % Search direction.
+isd=1; icg = 2; irc = 2 ; nu = 1.0;                           % Search direction.
 sg_seed = 565544; sg_al0 = 2; sg_be = 0.3; sg_ga = 0.01;      % SGM iteration.
 sg_emax = kmax; sg_ebest = floor(0.01*sg_emax);               % SGM stopping condition.
 %
@@ -32,4 +32,4 @@ t2=clock;
 total_t = etime(t2,t1);
 fprintf(' wall time = %6.1d s.\n', total_t);
 fclose(fileID);
-uo_nn_batch_BP_log(tr_seed,te_seed,sg_seed, total_t, csvfile);
+% uo_nn_batch_BP_log(tr_seed,te_seed,sg_seed, total_t, csvfile);
