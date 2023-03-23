@@ -42,9 +42,9 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(num_targe
     [Xtr,ytr] = uo_nn_dataset(tr_seed, tr_p, num_target, tr_freq);
     [Xte,yte] = uo_nn_dataset(te_seed, te_q, num_target, 0.0);
     %% Part 1: recognition of some specific target with GM and QNM
-    w = zeros(size(Xtr,1),1);                                              %% como defines w?? unos?? ceros --> 100%
+    w = zeros(size(Xtr,1),1);
     sig = @(X) 1./(1 + exp(-X)); y = @(X,w) sig(w'*sig(X));
-    L = @(w,X,Y) (norm(y(X,w) - Y)^2)/size(Y,2) + (la*norm(w)^2)/2;           %% es en funcion de X y y???
+    L = @(w,X,Y) (norm(y(X,w) - Y)^2)/size(Y,2) + (la*norm(w)^2)/2;
     gL = @(w,X,Y) (2*sig(X)*((y(X,w)-Y).*y(X,w).*(1-y(X,w)))')/size(Y,2)+la*w;
     
     if isd == 1 || isd == 3                                                    %% borrar parametros inecesarios
@@ -70,7 +70,7 @@ end
 
 % [start] FDM Alg. %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_fdm(w,L,gL,Xtr,ytr,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu)
-    k = 1; n = size(w,1); DC = 1;
+    k = 1; n = size(w,1); DC = 1; almax = 1;
     wk = [w]; dk = []; Lk = [L(w,Xtr,ytr)]; gLk = [gL(w,Xtr,ytr)]; alk = []; ioutk = [];
     betak = []; Hk = [];
     while norm(gL(w,Xtr,ytr)) > epsG && k < kmax && DC
@@ -78,13 +78,12 @@ function [wk,dk,Lk,gLk,alk,ioutk,betak,Hk,k] = uo_nn_solve_fdm(w,L,gL,Xtr,ytr,ep
         [d, beta, H] = uo_nn_descent_direction(w,Xtr,ytr,wk,dk,Hk,gL,isd,icg,irc,nu,k,n);
         dk = [dk, d]; betak = [betak, beta]; Hk(:,:,k) = H;
         %% Step line search
-        if k > 1                                                                      %% probar para min tiempo
-            ialmax = alk(:,k-1)*(gLk(:,k-1)'*dk(:,k-1))/(gL(w,Xtr,ytr)'*d);
+        if k > 1 && ialmax == 1
+            almax = alk(:,k-1)*(gLk(:,k-1)'*dk(:,k-1))/(gL(w,Xtr,ytr)'*d);
+        elseif k > 1
+            almax = 2*(L(w,Xtr,ytr)-Lk(:,k-1))/(gL(w,Xtr,ytr)'*d);
         end
-%         if k > 1
-%             ialmax = 2*(L(w,Xtr,ytr)-Lk(:,k-1))/(gL(w,Xtr,ytr)'*d);
-%         end
-        [alpha,iout] = uo_BLSNW32(@(w) L(w,Xtr,ytr),@(w) gL(w,Xtr,ytr),w,d,ialmax,c1,c2,kmaxBLS,epsal);
+        [alpha,iout] = uo_BLSNW32(@(w) L(w,Xtr,ytr),@(w) gL(w,Xtr,ytr),w,d,almax,c1,c2,kmaxBLS,epsal);
         alk = [alk, alpha]; ioutk = [ioutk, iout];
         %% Descent condition
         if gL(w,Xtr,ytr)'*d >= 0; DC = 0; end
