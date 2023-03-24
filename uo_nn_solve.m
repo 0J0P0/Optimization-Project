@@ -101,10 +101,10 @@ end
 
 % [start] Stochastic Gradient Method %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wo,k] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed)
-    p = size(Xtr, 2); wo = w;
+    p = size(Xtr, 2); wo = w; rng(sg_seed)
     m = floor(sg_ga*p); ke = ceil(p/m); kmax = sg_emax*ke; e = 0; s = 0; Lbest = Inf; k = 0;
     while e <= sg_emax && s < sg_ebest
-        P = randsample(1:p,p);
+        P = randperm(p);
         %% Minibatches
         for i = 0:ceil(p/m-1)
             Xtrs = []; ytrs = [];
