@@ -37,7 +37,7 @@
 %     te_acc : Accuracy^{TE}.
 %      niter : total number of iterations.
 %        tex : total running time (see "tic" "toc" Matlab commands).
-function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu)
+function [gLk,Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(gLk,num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu)
     %% Generate the training and test datasets
     [Xtr,ytr] = uo_nn_dataset(tr_seed, tr_p, num_target, tr_freq);
     [Xte,yte] = uo_nn_dataset(te_seed, te_q, num_target, 0.0);
@@ -51,12 +51,14 @@ function [Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex] = uo_nn_solve(num_targe
         tic
         [wo,niter] = uo_nn_solve_fdm(w,L,gL,Xtr,ytr,epsG,kmax,ialmax,kmaxBLS,epsal,c1,c2,isd,icg,irc,nu);
         tex = toc;
+        gLk = [gLk, gL(wo,Xtr,ytr)];
     end
     %% Part 2: stochastic gradient method (SGM)
     if isd == 7
         tic
         [wo,niter] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed);
         tex = toc;
+        gLk = [gLk, gL(wo,Xtr,ytr)];
     end
     fo = L(wo,Xtr,ytr);
     %% accuracy and output variables
@@ -101,22 +103,22 @@ end
 
 % [start] Stochastic Gradient Method %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wo,k] = uo_nn_solve_sgm(w,L,gL,Xtr,ytr,Xte,yte,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed)
-    p = size(Xtr, 2); wo = w; rng(sg_seed)
+    p = size(Xtr, 2); wo = w; rng(sg_seed);
     m = floor(sg_ga*p); ke = ceil(p/m); kmax = sg_emax*ke; e = 0; s = 0; Lbest = Inf; k = 0;
+
+    sg_k = floor(sg_be*kmax); sg_al = 0.01*sg_al0;
     while e <= sg_emax && s < sg_ebest
         P = randperm(p);
         %% Minibatches
-        for i = 0:ceil(p/m-1)
-            Xtrs = []; ytrs = [];
-            for s = i*m+1:min((i+1)*m,p)
-                Xtrs = [Xtrs, Xtr(:,P(:,uint8(s)))]; ytrs = [ytrs, ytr(:,P(:,uint8(s)))];
-            end
+        for i = 0:ceil(p/m - 1)
+            
+            S = [i*m+1:min((i+1)*m,p)];
+            Xtrs = Xtr(:,P(S)); ytrs = ytr(P(S));
             %% Descent direction
             d = -gL(w,Xtrs,ytrs);
             %% Learning rate
-            sg_k = floor(sg_be*kmax); sg_al = 0.01*sg_al0;
             if k <= sg_k
-                al = (1-k/sg_k)*sg_al0 + (k*sg_al)/sg_k;
+                al = (1 - k/sg_k)*sg_al0 + (k*sg_al)/sg_k;
             elseif k > sg_k
                 al = sg_al;
             end
