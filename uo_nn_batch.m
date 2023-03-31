@@ -14,15 +14,16 @@ fileID = fopen(csvfile ,'w');
 t1=clock;
 
 
-gLk = [];
+Lk = {}; it = 1; num = 1;
 for num_target = [1:10]
     for la = [0.0, 0.01, 0.1]
         for isd = [1,3,7]
-            [gLk,Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(gLk,num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu);
+            [it,num,go,Lk,Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(it,num,Lk,num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu);
             Gconv = 1;
-            if norm(gLk(:,end)) > epsG
+            if norm(go) > epsG
                 Gconv = 0;
             end
+            fprintf("la: %.2f, isd: %i, num: %i\n", la,isd,num_target);
             if iheader == 1
                 fprintf(fileID,'num_target;      la; isd;  niter;     tex; tr_acc; te_acc;        L*;   Gconv;\n');
             end
@@ -30,9 +31,14 @@ for num_target = [1:10]
             iheader=0;
         end
     end
+    num = num+1; it = 1;
 end
 t2=clock;
 total_t = etime(t2,t1);
 fprintf(' wall time = %6.1d s.\n', total_t);
 fclose(fileID);
+
+
+
+
 % uo_nn_batch_BP_log(tr_seed,te_seed,sg_seed, total_t, csvfile);
