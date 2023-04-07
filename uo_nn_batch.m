@@ -1,6 +1,6 @@
 clear;
 % Parameters.
-tr_seed = 123456; te_seed = 789101;
+tr_seed = 5397632; te_seed = 47969806;
 tr_p = 250; te_q = 250; tr_freq = 0.5; % Datasets generation
 epsG = 10^-6; kmax = 1000; % Stopping condition.
 ils=3; ialmax = 1; kmaxBLS=10; epsal=10^-3; c1=0.01; c2=0.45; % Linesearch.
@@ -13,25 +13,22 @@ csvfile = strcat('uo_nn_batch_',num2str(tr_seed),'-',num2str(te_seed),'.csv');
 fileID = fopen(csvfile ,'w');
 t1=clock;
 
-
-Lk = {}; it = 1; num = 1;
 for num_target = [1:10]
     for la = [0.0, 0.01, 0.1]
         for isd = [1,3,7]
-            [it,num,go,Lk,Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(it,num,Lk,num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu);
+            [go,Xtr,ytr,wo,fo,tr_acc,Xte,yte,te_acc,niter,tex]=uo_nn_solve(num_target,tr_freq,tr_seed,tr_p,te_seed,te_q,la,epsG,kmax,ils,ialmax,kmaxBLS,epsal,c1,c2,isd,sg_al0,sg_be,sg_ga,sg_emax,sg_ebest,sg_seed,icg,irc,nu);
             Gconv = 1;
             if norm(go) > epsG
                 Gconv = 0;
             end
-            fprintf("la: %.2f, isd: %i, num: %i\n", la,isd,num_target);
             if iheader == 1
-                fprintf(fileID,'num_target;      la; isd;  niter;     tex; tr_acc; te_acc;        L*;   Gconv;\n');
+                fprintf(fileID,'num_target;la;isd;niter;tex;tr_acc;te_acc;L*;Gconv;\n');
             end
             fprintf(fileID,'         %1i; %7.4f;   %1i; %6i; %7.4f;  %5.1f;  %5.1f;  %8.2e;       %i;\n', mod(num_target,10), la, isd, niter, tex, tr_acc, te_acc, fo, Gconv);
             iheader=0;
+            fprintf("la: %.2f, isd: %i, num: %i\n", la,isd,num_target);
         end
     end
-    num = num+1; it = 1;
 end
 t2=clock;
 total_t = etime(t2,t1);
